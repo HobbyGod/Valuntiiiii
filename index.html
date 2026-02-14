@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Valentine Particles</title>
+  <style>
+    html, body { margin:0; height:100%; background:#05040a; overflow:hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; }
+    canvas { position:fixed; inset:0; width:100%; height:100%; display:block; }
+    .overlay {
+      position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+      pointer-events:none; padding:24px;
+    }
+    .card {
+      pointer-events:none;
+      text-align:center;
+      padding:18px 22px;
+      border-radius:18px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 0 20px 80px rgba(0,0,0,0.45);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      max-width: 520px;
+    }
+    h1 {
+      margin:0 0 6px;
+      font-size: clamp(22px, 4vw, 34px);
+      letter-spacing: 0.5px;
+      color: rgba(255,255,255,0.95);
+      text-shadow: 0 8px 30px rgba(255,60,120,0.25);
+    }
+    p {
+      margin:0;
+      font-size: clamp(14px, 2.6vw, 18px);
+      line-height: 1.55;
+      color: rgba(255,255,255,0.78);
+    }
+    .hint {
+      position:fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: max(14px, env(safe-area-inset-bottom));
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.70);
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      pointer-events:none;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="c"></canvas>
+
+  <div class="overlay">
+    <div class="card">
+      <!-- My dear cute Nour -->
+      <h1>Happy Valentine’s Day 💗</h1>
+      <!-- Time passing by, but our journey still continuing-->
+      <p>For you — my favorite person. <br/>Tap anywhere and make the hearts bloom.</p>
+    </div>
+  </div>
+
+  <div class="hint">👉 Click —> LOVE, Swipe Loveeeeee</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d', { alpha: true });
+
+  let W = 0, H = 0, DPR = Math.min(2, window.devicePixelRatio || 1);
+  function resize() {
+    W = Math.floor(innerWidth);
+    H = Math.floor(innerHeight);
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  addEventListener('resize', resize, { passive: true });
+  resize();
+
+  // ---- helpers ----
+  const rand = (a,b)=> a + Math.random()*(b-a);
+  const clamp = (x,a,b)=> Math.max(a, Math.min(b,x));
+
+  // Parametric heart (classic)
+  function drawHeartPath(ctx) {
+    // x=16 sin^3 t ; y=13 cos t - 5 cos2t - 2 cos3t - cos4t
+    ctx.beginPath();
+    const s = 1/18; // scale for normalized size
+    for (let i=0; i<=120; i++) {
+      const t = (i/120) * Math.PI * 2;
+      const x = 16*Math.pow(Math.sin(t),3);
+      const y = 13*Math.cos(t) - 5*Math.cos(2*t) - 2*Math.cos(3*t) - Math.cos(4*t);
+      const px = x * s;
+      const py = -y * s; // invert y
+      if (i===0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+  }
+
+  // ---- background bokeh ----
+  const bokeh = Array.from({length: 30}, () => ({
+    x: rand(0, W),
+    y: rand(0, H),
+    r: rand(40, 160),
+    a: rand(0.03, 0.10),
+    vx: rand(-0.08, 0.08),
+    vy: rand(-0.05, 0.05),
+    hue: rand(330, 20) // wrap-ish
+  }));
+
+  // ---- particles ----
+  const particles = [];
+  const floatHearts = [];
+
+  function spawnBurst(x,y, n=42) {
+    for (let i=0; i<n; i++) {
+      const ang = rand(0, Math.PI*2);
+      const spd = rand(0.6, 3.4);
+      const vx = Math.cos(ang) * spd;
+      const vy = Math.sin(ang) * spd - rand(0.6, 2.2);
+      particles.push(new Particle(x, y, vx, vy, rand(10, 28), rand(0.9, 1.7), rand(330, 20)));
+    }
+    // extra sparkles
+    for (let i=0; i<14; i++) {
+      const ang = rand(0, Math.PI*2);
+      const spd = rand(0.8, 4.2);
+      particles.push(new Spark(x, y, Math.cos(ang)*spd, Math.sin(ang)*spd, rand(0.8, 1.4)));
+    }
+  }
+
+  function spawnTrail(x,y) {
+    if (Math.random() < 0.55) {
+      particles.push(new Particle(x, y, rand(-0.6,0.6), rand(-1.8,-0.2), rand(8, 18), rand(0.7, 1.3), rand(330, 20), 0.85));
+    }
+  }
+
+  class Particle {
+    constructor(x,y,vx,vy,size,life,hue,alpha=1) {
+      this.x=x; this.y=y;
+      this.vx=vx; this.vy=vy;
+      this.size=size;
+      this.life=life;
+      this.age=0;
+      this.rot=rand(-Math.PI, Math.PI);
+      this.vr=rand(-0.06, 0.06);
+      this.hue=hue;
+      this.alpha=alpha;
+      this.drag=0.985;
+      this.g=0.045;
+    }
+    step(dt) {
+      this.age += dt;
+      this.vx *= this.drag;
+      this.vy = this.vy * this.drag + this.g;
+      this.x += this.vx * dt*60;
+      this.y += this.vy * dt*60;
+      this.rot += this.vr * dt*60;
+      return this.age < this.life;
+    }
+    draw(ctx) {
+      const t = this.age / this.life;
+      const fade = (1 - t);
+      const a = this.alpha * fade * 0.95;
+      if (a <= 0.001) return;
+
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      ctx.rotate(this.rot);
+      const s = this.size * (0.55 + 0.55*fade);
+      ctx.scale(s, s);
+
+      // soft glow
+      ctx.shadowBlur = 24 * (0.4 + fade);
+      ctx.shadowColor = `hsla(${this.hue}, 95%, 62%, ${0.35*a})`;
+
+      // fill
+      const grad = ctx.createRadialGradient(0, -0.2, 0.05, 0, 0, 1.2);
+      grad.addColorStop(0, `hsla(${this.hue}, 95%, 75%, ${0.95*a})`);
+      grad.addColorStop(1, `hsla(${this.hue}, 95%, 55%, ${0.18*a})`);
+      ctx.fillStyle = grad;
+
+      drawHeartPath(ctx);
+      ctx.fill();
+
+      // tiny highlight stroke
+      ctx.lineWidth = 0.06;
+      ctx.strokeStyle = `hsla(${this.hue}, 100%, 88%, ${0.22*a})`;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
+  class Spark {
+    constructor(x,y,vx,vy,life) {
+      this.x=x; this.y=y; this.vx=vx; this.vy=vy;
+      this.life=life; this.age=0;
+    }
+    step(dt) {
+      this.age += dt;
+      this.vx *= 0.985;
+      this.vy = this.vy * 0.985 + 0.055;
+      this.x += this.vx * dt*60;
+      this.y += this.vy * dt*60;
+      return this.age < this.life;
+    }
+    draw(ctx) {
+      const t = this.age / this.life;
+      const a = (1-t) * 0.8;
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.fillStyle = `rgba(255,255,255,${0.9})`;
+      ctx.shadowBlur = 18;
+      ctx.shadowColor = `rgba(255,120,180,${0.55})`;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, 1.4 + (1-t)*1.2, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // floating hearts from bottom
+  function spawnFloatHeart() {
+    floatHearts.push({
+      x: rand(0, W),
+      y: H + rand(20, 120),
+      vy: rand(-0.25, -0.65),
+      vx: rand(-0.12, 0.12),
+      size: rand(10, 22),
+      rot: rand(-0.8, 0.8),
+      vr: rand(-0.01, 0.01),
+      hue: rand(330, 20),
+      a: rand(0.08, 0.18)
+    });
+  }
+
+  let last = performance.now();
+  let pointer = { x: W*0.5, y: H*0.55, down:false, moved:false };
+  let trailCooldown = 0;
+
+  function onPointer(e) {
+    const p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    pointer.x = p.clientX; pointer.y = p.clientY;
+    pointer.moved = true;
+  }
+  addEventListener('pointermove', onPointer, { passive:true });
+  addEventListener('touchmove', onPointer, { passive:true });
+
+  addEventListener('pointerdown', (e)=> {
+    pointer.down = true;
+    const x = e.clientX, y = e.clientY;
+    spawnBurst(x,y, 56);
+  }, { passive:true });
+
+  addEventListener('pointerup', ()=> pointer.down = false, { passive:true });
+
+  // ---- render loop ----
+  function frame(now) {
+    const dt = clamp((now - last)/1000, 0.001, 0.033);
+    last = now;
+
+    // background gradient
+    const g = ctx.createLinearGradient(0,0,W,H);
+    g.addColorStop(0, '#060414');
+    g.addColorStop(0.55, '#120524');
+    g.addColorStop(1, '#09040f');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // bokeh drift
+    for (const b of bokeh) {
+      b.x += b.vx * dt*60;
+      b.y += b.vy * dt*60;
+      if (b.x < -200) b.x = W+200;
+      if (b.x > W+200) b.x = -200;
+      if (b.y < -200) b.y = H+200;
+      if (b.y > H+200) b.y = -200;
+
+      ctx.save();
+      ctx.globalAlpha = b.a;
+      ctx.fillStyle = `hsla(${b.hue}, 90%, 60%, 1)`;
+      ctx.shadowBlur = 40;
+      ctx.shadowColor = `hsla(${b.hue}, 90%, 60%, 0.35)`;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // subtle vignette
+    ctx.save();
+    const vg = ctx.createRadialGradient(W*0.5, H*0.55, Math.min(W,H)*0.1, W*0.5, H*0.55, Math.max(W,H)*0.75);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+
+    // pointer trail
+    trailCooldown -= dt;
+    if (pointer.moved && trailCooldown <= 0) {
+      spawnTrail(pointer.x, pointer.y);
+      trailCooldown = 0.012;
+      pointer.moved = false;
+    }
+
+    // periodic floating hearts
+    if (Math.random() < 0.14) spawnFloatHeart();
+
+    // draw float hearts (background layer)
+    for (let i=floatHearts.length-1; i>=0; i--) {
+      const fh = floatHearts[i];
+      fh.x += fh.vx * dt*60;
+      fh.y += fh.vy * dt*60;
+      fh.rot += fh.vr * dt*60;
+
+      ctx.save();
+      ctx.globalAlpha = fh.a;
+      ctx.translate(fh.x, fh.y);
+      ctx.rotate(fh.rot);
+      const s = fh.size;
+      ctx.scale(s, s);
+      ctx.shadowBlur = 22;
+      ctx.shadowColor = `hsla(${fh.hue}, 95%, 60%, ${0.35})`;
+      ctx.fillStyle = `hsla(${fh.hue}, 95%, 62%, 0.55)`;
+      drawHeartPath(ctx);
+      ctx.fill();
+      ctx.restore();
+
+      if (fh.y < -120) floatHearts.splice(i,1);
+    }
+
+    // update particles
+    for (let i=particles.length-1; i>=0; i--) {
+      const p = particles[i];
+      if (!p.step(dt)) { particles.splice(i,1); continue; }
+    }
+
+    // draw particles (front layer)
+    for (const p of particles) p.draw(ctx);
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
