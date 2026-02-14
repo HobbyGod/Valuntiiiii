@@ -36,15 +36,22 @@
       line-height: 1.55;
       color: rgba(255,255,255,0.78);
     }
+
+    /* === BIG + BRIGHT notes === */
     .note{
-      margin: 0 0 10px;
-      font-size: clamp(16px, 3.2vw, 22px);
-      font-weight: 800;
-      font-style: italic;
-      letter-spacing: 0.4px;
-      color: rgba(255,255,255,0.92);
-      text-shadow: 0 10px 36px rgba(255,60,120,0.28);
+      margin: 0 0 12px;
+      font-size: clamp(20px, 4.2vw, 30px);
+      font-weight: 900;
+      letter-spacing: 0.6px;
+      color: rgba(255,255,255,0.99);
+      text-shadow:
+        0 0 18px rgba(255, 90, 160, 0.60),
+        0 0 42px rgba(255, 60, 120, 0.40),
+        0 16px 70px rgba(255, 60, 120, 0.28);
     }
+    .note-big{ font-size: clamp(24px, 5.2vw, 36px); }
+    .note-mid{ font-size: clamp(20px, 4.2vw, 30px); opacity: 0.98; margin-bottom: 14px; }
+
     .hint {
       position:fixed;
       left: 50%;
@@ -70,11 +77,10 @@
 
   <div class="overlay">
     <div class="card">
-    <div class="note">My dear cute Nour</div>
-    <h1>Happy Valentine’s Day 💗</h1>
-    <div class="note">Time passing by, but our journey still continuing</div>
+      <div class="note note-big">My dear cute Nour</div>
+      <h1>Happy Valentine’s Day 💗</h1>
+      <div class="note note-mid">Time passing by, but our journey still continuing</div>
       <p>For you — my favorite person. <br/>Tap anywhere and make the hearts bloom.</p>
-      
     </div>
   </div>
 
